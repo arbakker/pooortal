@@ -577,31 +577,151 @@ GET /events/<upload_id>?token=<share_token>
 - For multi-replica deployments, Redis pub/sub (`sse:<upload_id>`) is used to relay messages across replicas.
 - The connection is closed by the server after a `result` or `error` event is sent.
 
+##### Connection Logic (applies to both fresh connections and reconnects)
+
+Every time a client opens the SSE endpoint the server follows the same logic, regardless of whether this is the first connection or a reconnect:
+
+```
+1. Validate share token + upload ID ownership → 401/404 on failure
+2. Query DB: SELECT state, result, error_message, completed_at FROM jobs WHERE upload_id = ?
+3. If job state is SUCCEEDED:
+      → Send  id: result
+               event: result
+               data: {"upload_id":"<uuid>","job_id":"<uuid>","result":{<processor output>},"completed_at":"<ISO 8601>"}
+      → Close connection immediately
+4. If job state is DEAD:
+      → Send  id: error
+               event: error
+               data: {"upload_id":"<uuid>","job_id":"<uuid>","error":"<message>","attempt_count":<int>}
+      → Close connection immediately
+5. If job state is PENDING or RUNNING:
+      → Subscribe to pub/sub channel  sse:<upload_id>
+      → Stream heartbeats every 15 s
+      → Forward queued / processing / result / error events as they arrive
+      → Close connection after the terminal event (result or error) is forwarded
+```
+
+This "check DB first" pattern is the key mechanism that handles the **missed-event scenario**: the server never requires the client to have been connected when the job finished — it always reads from the database on connection.
+
 #### 5.7.2 SSE Event Types
 
-| Event name | When sent | Data fields |
-|------------|-----------|-------------|
-| `queued` | Job enqueued (immediately after upload) | `upload_id`, `job_id` |
-| `processing` | Worker picks up the job | `upload_id`, `job_id`, `started_at` |
-| `result` | Job succeeded | `upload_id`, `job_id`, `result` (JSON), `completed_at` |
-| `error` | Job failed (all retries exhausted) | `upload_id`, `job_id`, `error` (string), `attempt_count` |
-| `heartbeat` | Every 15 s while waiting | — (keep-alive comment line) |
+Each SSE event carries an `id:` field (used by the browser to track `Last-Event-ID`) and an `event:` field matching the event name.
+
+| Event name | `id:` value | When sent | Data fields |
+|------------|-------------|-----------|-------------|
+| `queued` | `queued` | Job enqueued (immediately after upload) | `upload_id`, `job_id` |
+| `processing` | `processing` | Worker picks up the job | `upload_id`, `job_id`, `started_at` |
+| `result` | `result` | Job succeeded | `upload_id`, `job_id`, `result` (JSON), `completed_at` |
+| `error` | `error` | Job failed (all retries exhausted) | `upload_id`, `job_id`, `error` (string), `attempt_count` |
+| `heartbeat` | _(omitted)_ | Every 15 s while waiting | — (keep-alive comment line `": heartbeat"`) |
+
+The `id:` values `queued`, `processing`, `result`, and `error` are the event type names used as SSE identifiers. This is a deliberate design choice rather than the more common sequential-number scheme: because the job FSM is **monotonically progressing** and each transition happens exactly once per job, the event type name is globally unambiguous as a cursor. `Last-Event-ID: processing` unambiguously tells the server "the client has seen everything up to and including the `processing` transition." No collision is possible. If the job FSM were ever extended to emit multiple events of the same type (e.g. progress updates), sequential IDs should be used instead.
 
 Example SSE stream:
 
 ```
-data: {"event":"queued","upload_id":"abc123","job_id":"job_456"}
+id: queued
+event: queued
+data: {"upload_id":"abc123","job_id":"job_456"}
 
-data: {"event":"processing","upload_id":"abc123","job_id":"job_456","started_at":"2026-03-10T12:00:05Z"}
+id: processing
+event: processing
+data: {"upload_id":"abc123","job_id":"job_456","started_at":"2026-03-10T12:00:05Z"}
 
-data: {"event":"result","upload_id":"abc123","job_id":"job_456","result":{"clean":true},"completed_at":"2026-03-10T12:00:08Z"}
+id: result
+event: result
+data: {"upload_id":"abc123","job_id":"job_456","result":{"clean":true},"completed_at":"2026-03-10T12:00:08Z"}
 ```
 
-#### 5.7.3 Client Reconnection
+#### 5.7.3 Client Reconnection and the Missed-Event Scenario
 
-- The browser's `EventSource` API reconnects automatically using the `Last-Event-ID` header.
-- The Go app uses SSE `id:` fields so the client can resume from the last received event.
-- If the client reconnects after the job has already completed, the Go app returns the stored result from the database immediately and closes the stream.
+##### How the browser reconnects
+
+The browser's `EventSource` API reconnects automatically after a network drop. On each reconnect it sends the `Last-Event-ID` header set to the `id:` of the last event it successfully received:
+
+```
+GET /events/<upload_id>?token=<share_token>
+Last-Event-ID: processing
+```
+
+##### The critical scenario: client disconnects while the job runs, then reconnects
+
+```
+Timeline:
+
+  t=0   Client connects  →  server streams: queued, processing
+  t=5   Client disconnects (network drop)
+  t=8   Worker finishes  →  job.state = SUCCEEDED, job.result stored in DB
+        pub/sub message published to sse:<upload_id>  (no subscriber — discarded)
+  t=12  Client reconnects  →  GET /events/<upload_id>  Last-Event-ID: processing
+
+Server on reconnect:
+  1. Validates token + upload ID                   ✓
+  2. Queries DB  →  job.state = SUCCEEDED          ← key step
+  3. Sends terminal event immediately from DB:
+
+       id: result
+       event: result
+       data: {"upload_id":"abc123","job_id":"job_456","result":{"clean":true},
+              "completed_at":"2026-03-10T12:00:08Z"}
+
+  4. Closes connection
+```
+
+The `Last-Event-ID: processing` header is informational here — the server already knows to skip straight to the terminal event because the DB says the job is finished. No pub/sub re-subscription is needed.
+
+##### Why this is safe regardless of timing
+
+Because the server **always** checks the database before subscribing to the pub/sub channel, there is no race condition:
+
+| Reconnect timing | DB state at reconnect | Server action |
+|------------------|-----------------------|---------------|
+| Before job starts | `PENDING` | Subscribe pub/sub, wait, stream events live |
+| While job is running | `RUNNING` | Subscribe pub/sub, wait, stream terminal event live |
+| After job finishes | `SUCCEEDED` or `DEAD` | Read result from DB, send immediately, close |
+
+The pub/sub channel is only needed to push events to clients that are **already connected** when the job transitions. It is not the source of truth — the database is.
+
+##### Sequence diagram
+
+```
+Browser          Go app             DB              Worker
+  │                │                 │                 │
+  │── connect ────►│                 │                 │
+  │                │── SELECT job ──►│                 │
+  │                │◄── PENDING ─────│                 │
+  │                │── subscribe ────────────────────► │ (pub/sub)
+  │◄── queued ─────│                 │                 │
+  │◄── processing ─│                 │                 │
+  │                │                 │                 │
+  ╳ (disconnect)   │                 │                 │
+                   │                 │◄── SUCCEEDED ───│
+                   │                 │   (DB write)    │
+                   │◄─ pub/sub msg ──────────────────── │
+                   │  (no subscriber; discarded)        │
+  │                │                 │                 │
+  │── reconnect ──►│                 │                 │
+  │  Last-Event-ID:│                 │                 │
+  │   processing   │── SELECT job ──►│                 │
+  │                │◄── SUCCEEDED ───│                 │
+  │◄── result ─────│  (from DB)      │                 │
+  │◄── (close) ────│                 │                 │
+```
+
+##### `Last-Event-ID` usage for intermediate events
+
+If the client reconnects while the job is **still running** (e.g. it missed only the `queued` event), the server uses `Last-Event-ID` to decide which already-observed intermediate events to skip:
+
+| `Last-Event-ID` received | Job state in DB | Events replayed on reconnect |
+|--------------------------|-----------------|------------------------------|
+| _(absent / empty)_ | `PENDING` | All future events live |
+| `queued` | `RUNNING` | `processing` (replay) + terminal live |
+| `processing` | `RUNNING` | Wait for terminal live only |
+| `queued` | `SUCCEEDED` | Terminal event from DB immediately |
+| `processing` | `SUCCEEDED` | Terminal event from DB immediately |
+| _(any)_ | `DEAD` | Error event from DB immediately |
+
+For the intermediate replay cases (`queued`/`processing` already in DB) the server reads the job timestamps from the DB to reconstruct the missed events before subscribing to live pub/sub.
 
 ---
 
