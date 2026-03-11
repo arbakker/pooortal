@@ -40,9 +40,15 @@ pip install -r requirements.txt
 # Optional: supply your own comma-separated list of valid tokens
 export VALID_TOKENS="my-secret,another-secret"
 
+# Optional: URL of the tusd upload endpoint shown to the browser frontend
+# (default: http://localhost:1080/upload/)
+export TUSD_URL="http://localhost:1080/upload/"
+
 python app.py
-# Server starts on http://127.0.0.1:5000
+# Flask server starts on http://127.0.0.1:5000
 ```
+
+Open **http://127.0.0.1:5000/** in a browser to use the upload frontend.
 
 ## Configuring tusd
 
@@ -54,7 +60,17 @@ tusd -base-path /upload/ \
      -hooks-http http://127.0.0.1:5000/hooks/pre-create
 ```
 
-## Client example
+## Browser frontend
+
+Navigating to `/` serves a single-page upload form.  Enter your upload token
+and choose a file – the page uses
+[tus-js-client](https://github.com/tus/tus-js-client) to perform a resumable
+upload directly to the tusd server and shows a live progress bar.
+
+The tusd endpoint the frontend uploads to is set by the `TUSD_URL` environment
+variable (default `http://localhost:1080/upload/`).
+
+## Client example (curl)
 
 Use any tus-compatible client and pass the token as upload metadata:
 

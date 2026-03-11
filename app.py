@@ -1,15 +1,24 @@
 import os
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
 # Only allow uploads whose target URI starts with this prefix.
 ALLOWED_UPLOAD_PATH = "/upload/"
 
+# URL of the tusd server's upload endpoint, used by the browser frontend.
+TUSD_URL = os.environ.get("TUSD_URL", "http://localhost:1080/upload/")
+
 # A set of valid tokens. In a real application, these would be stored
 # in a database or checked against an external service.
 VALID_TOKENS = set(os.environ.get("VALID_TOKENS", "secret-token").split(","))
+
+
+@app.route("/")
+def index():
+    """Serve the browser-based upload frontend."""
+    return render_template("index.html", tusd_url=TUSD_URL)
 
 
 @app.route("/hooks/pre-create", methods=["POST"])
