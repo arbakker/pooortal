@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>pooortal – file upload</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #222;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+      padding: 2.5rem 2rem;
+      width: min(480px, 95vw);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    label {
+      display: block;
+      font-size: .85rem;
+      font-weight: 600;
+      margin-bottom: .35rem;
+      color: #444;
+    }
+
+    input[type="text"],
+    input[type="file"] {
+      width: 100%;
+      padding: .55rem .75rem;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: .95rem;
+      margin-bottom: 1.1rem;
+      background: #fafbfc;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #0969da;
+      box-shadow: 0 0 0 3px rgba(9,105,218,.15);
+    }
+
+    button {
+      width: 100%;
+      padding: .65rem;
+      background: #0969da;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    button:disabled {
+      background: #8ab4e8;
+      cursor: not-allowed;
+    }
+
+    button:not(:disabled):hover { background: #0558c0; }
+
+    .progress-wrap {
+      margin-top: 1.2rem;
+      display: none;
+    }
+
+    progress {
+      width: 100%;
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+      border: none;
+      background: #e8edf2;
+    }
+
+    progress::-webkit-progress-bar  { background: #e8edf2; border-radius: 5px; }
+    progress::-webkit-progress-value{ background: #0969da; border-radius: 5px; transition: width .2s; }
+    progress::-moz-progress-bar     { background: #0969da; border-radius: 5px; }
+
+    .progress-label {
+      font-size: .82rem;
+      color: #555;
+      margin-top: .35rem;
+      text-align: right;
+    }
+
+    .status {
+      margin-top: 1rem;
+      padding: .75rem 1rem;
+      border-radius: 6px;
+      font-size: .9rem;
+      display: none;
+    }
+
+    .status.success { background: #dafbe1; color: #116329; }
+    .status.error   { background: #ffebe9; color: #82071e; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>Upload a file</h1>
+
+  <label for="token">Upload token</label>
+  <input id="token" type="text" placeholder="your-secret-token" autocomplete="off" />
+
+  <label for="fileInput">File</label>
+  <input id="fileInput" type="file" />
+
+  <button id="uploadBtn" disabled>Upload</button>
+
+  <div class="progress-wrap" id="progressWrap">
+    <progress id="progressBar" value="0" max="100"></progress>
+    <div class="progress-label" id="progressLabel">0 %</div>
+  </div>
+
+  <div class="status" id="statusMsg"></div>
+</div>
+
+<!--
+  tus-js-client – resumable uploads via the tus protocol.
+  https://github.com/tus/tus-js-client
+-->
+<script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
+<script>
+  const TUSD_ENDPOINT = {{ tusd_url | tojson }};
+
+  const tokenInput   = document.getElementById("token");
+  const fileInput    = document.getElementById("fileInput");
+  const uploadBtn    = document.getElementById("uploadBtn");
+  const progressWrap = document.getElementById("progressWrap");
+  const progressBar  = document.getElementById("progressBar");
+  const progressLabel= document.getElementById("progressLabel");
+  const statusMsg    = document.getElementById("statusMsg");
+
+  // Enable the button only when both fields have values.
+  function checkReady() {
+    uploadBtn.disabled = !(tokenInput.value.trim() && fileInput.files.length > 0);
+  }
+  tokenInput.addEventListener("input", checkReady);
+  fileInput.addEventListener("change", checkReady);
+
+  function showStatus(type, text) {
+    statusMsg.className = "status " + type;
+    statusMsg.textContent = text;
+    statusMsg.style.display = "block";
+  }
+
+  uploadBtn.addEventListener("click", () => {
+    const file  = fileInput.files[0];
+    const token = tokenInput.value.trim();
+    if (!file || !token) return;
+
+    // Reset UI state.
+    statusMsg.style.display  = "none";
+    progressWrap.style.display = "block";
+    progressBar.value  = 0;
+    progressLabel.textContent = "0 %";
+    uploadBtn.disabled = true;
+
+    const upload = new tus.Upload(file, {
+      endpoint: TUSD_ENDPOINT,
+      retryDelays: [0, 3000, 5000, 10000],
+      metadata: {
+        filename: file.name,
+        filetype: file.type,
+        token: token,
+      },
+      onError(err) {
+        console.error("Upload failed:", err);
+        uploadBtn.disabled = false;
+        showStatus("error", "Upload failed: " + err.message);
+      },
+      onProgress(bytesUploaded, bytesTotal) {
+        const pct = bytesTotal > 0 ? Math.round(bytesUploaded / bytesTotal * 100) : 0;
+        progressBar.value = pct;
+        progressLabel.textContent = pct + " %";
+      },
+      onSuccess() {
+        progressBar.value = 100;
+        progressLabel.textContent = "100 %";
+        showStatus("success", "✓ Upload complete: " + upload.url);
+        uploadBtn.disabled = false;
+      },
+    });
+
+    upload.findPreviousUploads().then((previous) => {
+      if (previous.length > 0) upload.resumeFromPreviousUpload(previous[0]);
+      upload.start();
+    });
+  });
+</script>
+</body>
+</html>
