@@ -1,0 +1,91 @@
+﻿STEP-BUILD
+2026-03-12T11:19:18.411445190Z + cat .uv-version
+2026-03-12T11:19:18.413221372Z + UV_VERSION=0.10.9
+2026-03-12T11:19:18.413422497Z + curl -LsSf https://astral.sh/uv/0.10.9/install.sh
+2026-03-12T11:19:18.413536782Z + sh
+2026-03-12T11:19:18.814007635Z downloading uv 0.10.9 x86_64-unknown-linux-gnu
+2026-03-12T11:19:19.006480021Z no checksums to verify
+2026-03-12T11:19:19.406943141Z installing to /workspace/input/.local/bin
+2026-03-12T11:19:19.486292813Z   uv
+2026-03-12T11:19:19.489133037Z   uvx
+2026-03-12T11:19:19.494150672Z everything's installed!
+2026-03-12T11:19:19.511592570Z 
+2026-03-12T11:19:19.511592570Z To add $HOME/.local/bin to your PATH, either restart your shell or run:
+2026-03-12T11:19:19.511592570Z 
+2026-03-12T11:19:19.511592570Z     source $HOME/.local/bin/env (sh, bash, zsh)
+2026-03-12T11:19:19.511592570Z     source $HOME/.local/bin/env.fish (fish)
+2026-03-12T11:19:19.517938747Z + export PATH=/workspace/input/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+2026-03-12T11:19:19.517938747Z + uv sync --frozen --no-dev
+2026-03-12T11:19:19.742017028Z Using CPython 3.12.7 interpreter at: /usr/local/bin/python3
+2026-03-12T11:19:19.742056131Z Creating virtual environment at: .venv
+2026-03-12T11:19:19.758912273Z    Building gird-wiki @ file:///workspace/input
+2026-03-12T11:19:19.781209254Z Downloading pygments (1.2MiB)
+2026-03-12T11:19:19.782479558Z Downloading mkdocs-material (8.9MiB)
+2026-03-12T11:19:19.782592818Z Downloading babel (9.7MiB)
+2026-03-12T11:19:19.782709746Z Downloading mkdocs (3.7MiB)
+2026-03-12T11:19:19.836216654Z    Building mkdocs-exclude==1.0.2
+2026-03-12T11:19:19.950539555Z  Downloaded mkdocs
+2026-03-12T11:19:19.969377922Z  Downloaded pygments
+2026-03-12T11:19:20.253742524Z  Downloaded babel
+2026-03-12T11:19:21.329589763Z       Built gird-wiki @ file:///workspace/input
+2026-03-12T11:19:21.357901211Z       Built mkdocs-exclude==1.0.2
+2026-03-12T11:19:22.235849778Z  Downloaded mkdocs-material
+2026-03-12T11:19:22.236185082Z Prepared 31 packages in 2.49s
+2026-03-12T11:19:22.550781746Z Installed 31 packages in 314ms
+2026-03-12T11:19:22.550828022Z  + babel==2.18.0
+2026-03-12T11:19:22.550848220Z  + backrefs==6.2
+2026-03-12T11:19:22.550880239Z  + certifi==2026.2.25
+2026-03-12T11:19:22.550921136Z  + charset-normalizer==3.4.5
+2026-03-12T11:19:22.550939570Z  + click==8.3.1
+2026-03-12T11:19:22.550964185Z  + colorama==0.4.6
+2026-03-12T11:19:22.550982459Z  + ghp-import==2.1.0
+2026-03-12T11:19:22.551013087Z  + gird-wiki==0.1.dev230+g154babf81 (from file:///workspace/input)
+2026-03-12T11:19:22.551037883Z  + idna==3.11
+2026-03-12T11:19:22.551050096Z  + jinja2==3.1.6
+2026-03-12T11:19:22.551074511Z  + markdown==3.10.2
+2026-03-12T11:19:22.551092845Z  + markupsafe==3.0.3
+2026-03-12T11:19:22.551117210Z  + mergedeep==1.3.4
+2026-03-12T11:19:22.551135364Z  + mkdocs==1.6.1
+2026-03-12T11:19:22.551159720Z  + mkdocs-exclude==1.0.2
+2026-03-12T11:19:22.551177843Z  + mkdocs-get-deps==0.2.2
+2026-03-12T11:19:22.551196177Z  + mkdocs-material==9.7.5
+2026-03-12T11:19:22.551220573Z  + mkdocs-material-extensions==1.3.1
+2026-03-12T11:19:22.551238917Z  + packaging==26.0
+2026-03-12T11:19:22.551257291Z  + paginate==0.5.7
+2026-03-12T11:19:22.551281656Z  + pathspec==1.0.4
+2026-03-12T11:19:22.551299790Z  + platformdirs==4.9.4
+2026-03-12T11:19:22.551318054Z  + pygments==2.19.2
+2026-03-12T11:19:22.551342409Z  + pymdown-extensions==10.21
+2026-03-12T11:19:22.551360723Z  + python-dateutil==2.9.0.post0
+2026-03-12T11:19:22.551385009Z  + pyyaml==6.0.3
+2026-03-12T11:19:22.551403142Z  + pyyaml-env-tag==1.1
+2026-03-12T11:19:22.551424773Z  + requests==2.32.5
+2026-03-12T11:19:22.551442856Z  + six==1.17.0
+2026-03-12T11:19:22.551461250Z  + urllib3==2.6.3
+2026-03-12T11:19:22.551485606Z  + watchdog==6.0.0
+2026-03-12T11:19:22.583712374Z + uv run gird-wiki-build ./site
+2026-03-12T11:19:22.657603081Z Downloading prek (5.5MiB)
+2026-03-12T11:19:22.716913342Z  Downloaded prek
+2026-03-12T11:19:22.719321764Z Installed 1 package in 2ms
+2026-03-12T11:19:23.455033774Z 
+2026-03-12T11:19:23.455033774Z [31m │  ⚠  Warning from the Material for MkDocs team[0m
+2026-03-12T11:19:23.455033774Z [31m │[0m
+2026-03-12T11:19:23.455033774Z [31m │[0m  MkDocs 2.0, the underlying framework of Material for MkDocs,
+2026-03-12T11:19:23.455033774Z [31m │[0m  will introduce backward-incompatible changes, including:
+2026-03-12T11:19:23.455033774Z [31m │[0m
+2026-03-12T11:19:23.455033774Z [31m │  × [0mAll plugins will stop working – the plugin system has been removed
+2026-03-12T11:19:23.455033774Z [31m │  × [0mAll theme overrides will break – the theming system has been rewritten
+2026-03-12T11:19:23.455033774Z [31m │  × [0mNo migration path exists – existing projects cannot be upgraded
+2026-03-12T11:19:23.455033774Z [31m │  × [0mClosed contribution model – community members can't report bugs
+2026-03-12T11:19:23.455033774Z [31m │  × [0mCurrently unlicensed – unsuitable for production use
+2026-03-12T11:19:23.455033774Z [31m │[0m
+2026-03-12T11:19:23.455033774Z [31m │[0m  Our full analysis:
+2026-03-12T11:19:23.455033774Z [31m │[0m
+2026-03-12T11:19:23.455033774Z [31m │[0m  [4mhttps://squidfunk.github.io/mkdocs-material/blog/2026/02/18/mkdocs-2.0/[0m
+2026-03-12T11:19:23.455033774Z [0m
+2026-03-12T11:19:23.552224728Z config_path='/workspace/input/src/gird_wiki/mkdocs.yaml'
+2026-03-12T11:19:23.552224728Z 2026-03-12 11:19:23,552 - mkdocs.commands.build - 271 - build - INFO - Cleaning site directory
+2026-03-12T11:19:23.552300639Z 2026-03-12 11:19:23,552 - mkdocs.commands.build - 281 - build - INFO - Building documentation to directory: /workspace/input/site
+2026-03-12T11:19:24.537289837Z 2026-03-12 11:19:24,537 - mkdocs.commands.build - 353 - build - INFO - Documentation built in 1.01 seconds
+
+

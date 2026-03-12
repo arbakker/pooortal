@@ -1,0 +1,24 @@
+[project]
+name = "pooortal"
+version = "0.1.0"
+description = "Minimal Python Flask application that processes a tusd pre-create hook to validate a token in the upload metadata and restrict uploads to the /upload/ path."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "Flask>=2.3,<4",
+    "flask-cors>=5.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+managed = true
+
+[tool.hatch.version]
+path = "src/app.py"
+pattern = "__version__ = ['\"](?P<version>[^'\"]*)['\"]"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/app"]

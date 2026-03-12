@@ -53,12 +53,18 @@ Open **http://127.0.0.1:5000/** in a browser to use the upload frontend.
 ## Configuring tusd
 
 Start tusd with `/upload/` as the base path and point the `pre-create` hook at
-the Flask server:
+the Flask server. Note: tusd CORS flags use regex patterns, not wildcards:
 
 ```bash
 tusd -base-path /upload/ \
-     -hooks-http http://127.0.0.1:5000/hooks/pre-create
+  -hooks-http http://127.0.0.1:5000/hooks/pre-create \
+  -cors-allow-origin '.*' \
+  -cors-allow-methods 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS' \
+  -cors-allow-headers '.*' \
+  -cors-expose-headers 'Upload-Offset, Upload-Length, Location'
 ```
+
+The `-cors-allow-origin '.*'` flag (regex pattern, not wildcard) allows any origin for testing.
 
 ## Browser frontend
 
