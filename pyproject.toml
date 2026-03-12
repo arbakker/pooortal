@@ -5,6 +5,7 @@ description = "Minimal Python Flask application that processes a tusd pre-create
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
+    "azure-storage-blob>=12.26.0",
     "Flask>=2.3,<4",
     "flask-cors>=5.0.0",
 ]

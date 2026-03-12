@@ -1,0 +1,101 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Azurite",
+      "type": "shell",
+      "command": "azurite",
+      "args": ["--location", "./azurite-data", "--skipApiVersionCheck"],
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^.*Blob Azure Storage Emulator listening at.*$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Azurite.*started.*$",
+          "endsPattern": "^.*Azurite Blob service is successfully listening at.*$"
+        }
+      }
+    },
+    {
+      "label": "Wait for Azurite",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "for i in {1..30}; do curl -s http://127.0.0.1:10000 >/dev/null 2>&1 && echo Azurite ready! && exit 0; sleep 1; done; echo Azurite timeout; exit 1"
+      ],
+      "dependsOn": ["Start Azurite"],
+      "dependsOrder": "sequence",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Create Azure Container",
+      "type": "shell",
+      "command": ".venv/bin/python",
+      "args": ["scripts/create_container.py"],
+      "dependsOn": ["Wait for Azurite"],
+      "dependsOrder": "sequence",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Start tusd",
+      "type": "shell",
+      "command": "tusd",
+      "args": [
+        "-base-path",
+        "/upload/",
+        "-azure-storage",
+        "upload-container",
+        "-azure-endpoint",
+        "http://127.0.0.1:10000/devstoreaccount1",
+        "-hooks-http",
+        "http://127.0.0.1:5000/hooks/pre-create"
+      ],
+      "options": {
+        "env": {
+          "AZURE_STORAGE_ACCOUNT": "devstoreaccount1",
+          "AZURE_STORAGE_KEY": "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+        }
+      },
+      "isBackground": true,
+      "dependsOn": ["Create Azure Container"],
+      "dependsOrder": "sequence",
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^.*$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Azure BlockBlob Storage authentication.*$",
+          "endsPattern": "^.*You can now upload files to.*$"
+        }
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Start development environment (Azurite + tusd)",
+      "dependsOn": ["Start tusd"],
+      "dependsOrder": "sequence"
+    }
+  ]
+}
