@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>pooortal – file upload service</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #222;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+      padding: 2.5rem 2rem;
+      width: min(540px, 95vw);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    h2 {
+      margin: 1.5rem 0 0.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #333;
+      border-bottom: 2px solid #e8edf2;
+      padding-bottom: 0.5rem;
+    }
+
+    p {
+      margin: 0 0 1rem;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #555;
+    }
+
+    a {
+      color: #0969da;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0.75rem 0;
+    }
+
+    li {
+      padding: 0.35rem 0 0.35rem 1.5rem;
+      position: relative;
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #0969da;
+      font-weight: bold;
+    }
+
+    code {
+      background: #f5f5f5;
+      border: 1px solid #d0d7de;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      color: #e85d75;
+    }
+
+    .code-block {
+      background: #fafbfc;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin: 0.75rem 0;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: #333;
+    }
+
+    .info-box {
+      background: #f0f6ff;
+      border-left: 4px solid #0969da;
+      border-radius: 4px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+
+    .info-box strong {
+      color: #0969da;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>📤 pooortal</h1>
+  <p>Secure, token-based file upload service powered by <a href="https://tus.io" target="_blank">tus protocol</a>.</p>
+
+  <h2>Getting Started</h2>
+  <p>To upload files, you need a valid access token. Contact your administrator to generate one.</p>
+  <p>Once you have a token, visit:</p>
+  <div class="code-block">https://your-domain.com/&lt;your-token&gt;</div>
+
+  <h2>Features</h2>
+  <ul>
+    <li>Resumable uploads – pause and resume anytime</li>
+    <li>Token-based authentication</li>
+    <li>Real-time progress tracking</li>
+    <li>Secure path validation</li>
+  </ul>
+
+  <h2>Programmatic Uploads</h2>
+  <p>Create uploads using the tus protocol:</p>
+  <div class="code-block">curl -X POST https://your-domain.com/upload/ \
+  -H "Tus-Resumable: 1.0.0" \
+  -H "Upload-Length: 1024" \
+  -H "Upload-Metadata: token &lt;your-token&gt;"</div>
+
+  <div class="info-box">
+    <strong>Need an upload token?</strong> Contact your administrator to request access.
+  </div>
+</div>
+</body>
+</html>

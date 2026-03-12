@@ -19,6 +19,12 @@ TUSD_URL = os.environ.get("TUSD_URL", "http://localhost:1080/upload/")
 VALID_TOKENS = set(os.environ.get("VALID_TOKENS", "secret-token").split(","))
 
 
+@app.route("/")
+def landing():
+    """Serve landing page with instructions."""
+    return render_template("landing.html")
+
+
 @app.route("/<token>")
 def index(token):
     """Serve the browser-based upload frontend."""
