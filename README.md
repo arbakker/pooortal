@@ -4,6 +4,88 @@ Minimal Python Flask application that processes a [tusd](https://github.com/tus/
 `pre-create` hook to validate a token in the upload metadata **and** restrict
 uploads to the `/upload/` path.
 
+## Architecture
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant F as Flask<br/>:5000
+    participant T as tusd<br/>:8080
+    participant S as Azure Blob Storage<br/>(Azurite for dev)
+
+    B->>F: GET /<token>
+    F-->>F: Validate token
+    F-->>B: Upload page (HTML + tus-js-client)
+
+    B->>T: POST /upload/<br/>(Upload-Metadata: token=...)
+    T->>F: POST /hooks/pre-create<br/>(hook payload with token)
+    F-->>F: Check path + token
+    alt Valid token
+        F-->>T: 200 OK
+        T->>S: Store file
+        T-->>B: 201 Created (Location header)
+        B->>T: PATCH /upload/<id><br/>(upload file chunks)
+        T->>S: Append data
+        T-->>B: 204 No Content
+    else Invalid token
+        F-->>T: 200 + RejectUpload
+        T-->>B: 403 Forbidden
+    end
+```
+
+```mermaid
+graph LR
+    subgraph "Development"
+        AZ[Azurite<br/>:10000]
+    end
+    subgraph "Application"
+        FL[Flask<br/>:5000]
+        TU[tusd<br/>:8080]
+    end
+    subgraph "Client"
+        BR[Browser]
+    end
+
+    BR -->|"GET /&lt;token&gt;"| FL
+    BR -->|"tus upload"| TU
+    TU -->|"pre-create hook"| FL
+    TU -->|"blob storage"| AZ
+```
+
+### Kubernetes deployment
+
+```mermaid
+graph TB
+    subgraph "Kubernetes Cluster"
+        ING[Ingress Controller]
+
+        subgraph "Pod"
+            direction TB
+            subgraph "Main Container"
+                NG[nginx<br/>:80]
+                FL2[Flask / gunicorn<br/>:5000]
+            end
+            subgraph "Sidecar Container"
+                TU2[tusd<br/>:8080]
+            end
+            NG -->|"/&lt;token&gt;"| FL2
+            NG -->|"/upload/"| TU2
+            TU2 -->|"pre-create hook<br/>localhost:5000"| FL2
+        end
+
+        SVC[Service<br/>:80]
+    end
+
+    subgraph "Azure"
+        BLOB[(Azure Blob Storage)]
+    end
+
+    CLIENT[Client / Browser] -->|HTTPS| ING
+    ING --> SVC
+    SVC --> NG
+    TU2 -->|"blob storage"| BLOB
+```
+
 ## How it works
 
 [tusd](https://github.com/tus/tusd) supports lifecycle hooks that are called at

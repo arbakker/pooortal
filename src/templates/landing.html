@@ -135,11 +135,31 @@
   </ul>
 
   <h2>Programmatic Uploads</h2>
-  <p>Create uploads using the tus protocol:</p>
-  <div class="code-block">curl -X POST https://your-domain.com/upload/ \
+  <p>Create an upload and send data in 100 MB chunks using the tus protocol:</p>
+  <div class="code-block"># 1. Create the upload (replace FILE and TOKEN)
+FILE="path/to/file"
+TOKEN="your-token"
+SIZE=$(wc -c &lt; "$FILE")
+CHUNK=104857600  # 100 MB
+
+LOCATION=$(curl -s -D- -X POST https://your-domain.com/upload/ \
   -H "Tus-Resumable: 1.0.0" \
-  -H "Upload-Length: 1024" \
-  -H "Upload-Metadata: token &lt;your-token&gt;"</div>
+  -H "Upload-Length: $SIZE" \
+  -H "Upload-Metadata: token $(echo -n $TOKEN | base64)" \
+  | grep -i ^location: | tr -d '\r' | cut -d' ' -f2)
+
+# 2. Upload in 100 MB chunks
+OFFSET=0
+while [ "$OFFSET" -lt "$SIZE" ]; do
+  BYTES=$(( SIZE - OFFSET &lt; CHUNK ? SIZE - OFFSET : CHUNK ))
+  curl -X PATCH "$LOCATION" \
+    -H "Tus-Resumable: 1.0.0" \
+    -H "Upload-Offset: $OFFSET" \
+    -H "Content-Type: application/offset+octet-stream" \
+    -H "Content-Length: $BYTES" \
+    --data-binary @&lt;(dd if="$FILE" bs=1 skip=$OFFSET count=$BYTES 2&gt;/dev/null)
+  OFFSET=$(( OFFSET + BYTES ))
+done</div>
 
   <div class="info-box">
     <strong>Need an upload token?</strong> Contact your administrator to request access.
